@@ -4,12 +4,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <irq.h>
 #include <libbase/uart.h>
+#include <liblitedram/sdram.h>
 #include <libbase/console.h>
 #include <generated/csr.h>
 
+#include <liblitesdcard/spisdcard.h>
+#include <libfatfs/ff.h>
 /*-----------------------------------------------------------------------*/
 /* Uart                                                                  */
 /*-----------------------------------------------------------------------*/
@@ -91,6 +95,7 @@ static void help(void)
 #ifdef WITH_CXX
 	puts("hellocpp           - Hello C++");
 #endif
+	puts("bench              - MMC Benchmark");
 }
 
 /*-----------------------------------------------------------------------*/
@@ -131,6 +136,13 @@ static void led_cmd(void)
 		leds_out_write(0xaa);
 		busy_wait(200);
 	}
+	printf("Dhruvin mode...\n");
+	for(i=0; i<4; i++) {
+		leds_out_write(0x55);
+		busy_wait(200);
+		leds_out_write(0xaa);
+		busy_wait(200);
+	}
 }
 #endif
 
@@ -160,12 +172,160 @@ static void hellocpp_cmd(void)
 }
 #endif
 
+static unsigned long  rdcycle(){
+	unsigned long cycles;
+	// asm volatile("rdcycle %0" : "=r" (cycles));
+	timer0_uptime_latch_write(1);
+	cycles = timer0_uptime_cycles_read();
+	return cycles;
+}
+
+static void bench_cmd(void)
+{
+	sdram_controller_bandwidth_update_write(0x1L);
+	int tmp[1000];
+	for(int i = 0; i < 1000; i++){
+		tmp[i] = tmp[i] + 1;
+	}
+	
+	printf("Clock Freq: %d\n", CONFIG_CLOCK_FREQUENCY);
+	sdram_controller_bandwidth_update_write(0x1L);
+	// uint32_t update = sdram_controller_bandwidth_update_read();
+	uint32_t nreads = sdram_controller_bandwidth_nreads_read();
+	uint32_t nwrites = sdram_controller_bandwidth_nwrites_read();
+	uint32_t data_width = sdram_controller_bandwidth_data_width_read();
+	printf("DRAM Bandwidth...\n");
+	// printf("UPDATE:     %ld\n", update);
+	printf("NWRITES:     %ld\n", nreads);
+	printf("MAX NWRITES:    %ld\n", nwrites);
+	printf("DATA WIDTH: %ld\n", data_width);
+	printf("UPTIME: %ld\n", rdcycle()/CONFIG_CLOCK_FREQUENCY);
+	// for(int i = 0; i < 1000; i++){
+	// 	busy_wait(200);
+	// 	for(int i = 0; i < 1000; i++){
+	// 		tmp[i] = tmp[i] + 1;
+	// 	}
+	// 	sdram_controller_bandwidth_update_write(0x1L);
+	// 	// uint32_t update = sdram_controller_bandwidth_update_read();
+	// 	uint32_t nreads = sdram_controller_bandwidth_nreads_read();
+	// 	uint32_t nwrites = sdram_controller_bandwidth_nwrites_read();
+	// 	uint32_t data_width = sdram_controller_bandwidth_data_width_read();
+
+	// 	if(nreads != 1 || nwrites != 1){
+	// 		printf("DRAM Bandwidth...\n");
+	// 		// printf("UPDATE:     %ld\n", update);
+	// 		printf("NREADS:     %ld\n", nreads);
+	// 		printf("NWRITES:    %ld\n", nwrites);
+	// 		printf("DATA WIDTH: %ld\n", data_width);
+	// 	}
+	// }
+	// printf("MMC Benchmark...\n");
+	// spisdcard_init();
+	// fatfs_set_ops_spisdcard();
+
+
+	// FATFS FatFs;
+
+	// FIL fil;        /* File object */
+    // char line[4096]; /* Line buffer */
+    // FRESULT fr;     /* FatFs return code */
+	// UINT bw;
+
+	// unsigned long start, end;
+
+    // /* Give a work area to the default drive */
+    // f_mount(&FatFs, "", 0);
+
+    // /* Open a text file */
+    // fr = f_open(&fil, "Image", FA_READ);
+    // if(fr != FR_OK){
+	// 	printf("Error while opening file. FRESULT: %d\n", fr);
+	// }
+	// unsigned long bytesRead = 0;
+
+	// start = rdcycle();
+	// while((fr = f_read(&fil, line, sizeof(line), &bw)) == FR_OK && bw != 0) {
+	// 	// printf("Bytes read %d", bw);
+	// 	// printf(line);
+	// 	bytesRead += bw;
+	// }
+
+	// end = rdcycle();
+
+
+
+	// if(fr != FR_OK) {
+    //     printf("Error while reading file. FRESULT: %d\n", fr);
+    // }else{
+	// 	unsigned long timeTaken = (end-start)/CONFIG_CLOCK_FREQUENCY;
+	// 	unsigned int bandwidth = bytesRead/timeTaken/1000;
+	// 	printf("READ: Time taken: %lu seconds, data: %luB, bandwidth: %d kB/s \n", timeTaken, bytesRead, bandwidth);
+
+	// }
+	// return;
+
+
+
+	// /* Open a text file */
+	// FIL fil2;
+    // fr = f_open(&fil2, "0:text.txt", FA_CREATE_ALWAYS | FA_WRITE );
+    // if(fr != FR_OK){
+	// 	printf("Error while opening file. FRESULT: %d\n", fr);
+	// 	return;
+	// }
+	// unsigned long bytesWritten = 0;
+	// unsigned long fileSize = 10*1024*1024;
+
+	// start = rdcycle();
+	// // int res = f_puts(line, &fil2); //(&fil2, line, sizeof(line), &bw);
+	// // if(res < 0){
+	// // 	printf("Error while writing file. FRESULT: %d\n", res);
+	// // 	return;
+	// // }else{
+	// // 	// f_sync(&fil2);	
+	// // }
+
+	// fr = f_write(&fil2, line, sizeof(line), &bw);
+
+	// if(fr != FR_OK){
+	// 	printf("Error while writing file. FRESULT: %d\n", fr);
+	// 	return;
+	// }
+	// // while((fr = f_write(&fil2, line, sizeof(line), &bw)) == FR_OK && bw == sizeof(line) && bytesWritten <= fileSize) {
+	// // 	printf("Bytes read %d", bw);
+	// // 	// printf(line);
+	// // 	bytesWritten += bw;
+	// // }
+	// // f_sync(&fil2);
+
+	// end = rdcycle();
+
+
+
+	
+	// unsigned int timeTaken = (end-start)/CONFIG_CLOCK_FREQUENCY;
+	// unsigned int bandwidth = bytesWritten/timeTaken/1000;
+	// printf("WRITE: Cycles taken: %d seconds, data: %luB, bandwidth: %d kB/s \n", timeTaken, bytesWritten, bandwidth);
+
+
+
+
+
+    // /* Close the file */
+    // // f_close(&fil2);
+	// f_unmount("0:");
+
+	
+	
+}
+
 /*-----------------------------------------------------------------------*/
 /* Console service / Main                                                */
 /*-----------------------------------------------------------------------*/
 
 static void console_service(void)
 {
+	
 	char *str;
 	char *token;
 
@@ -188,6 +348,10 @@ static void console_service(void)
 	else if(strcmp(token, "hellocpp") == 0)
 		hellocpp_cmd();
 #endif
+	else if(strcmp(token, "bench") == 0)
+		bench_cmd();
+
+
 	prompt();
 }
 
@@ -201,6 +365,7 @@ int main(void)
 
 	help();
 	prompt();
+
 
 	while(1) {
 		console_service();
